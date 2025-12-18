@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Voice Assistant</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Orbitron:wght@600&display=swap');
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(270deg, #001f3f, #000000, #001f3f);
+    background-size: 400% 400%;
+    animation: gradientShift 10s infinite ease-in-out;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff, 0 0 20px #00eaff, 0 0 40px #00eaff;
+    margin-bottom: 20px;
+  }
+
+  .chat-container {
+    width: 85%;
+    max-width: 650px;
+    height: 65vh;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    overflow-y: auto;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+  }
+
+  .message {
+    margin: 10px 0;
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 75%;
+    line-height: 1.4;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+  }
+
+  .user {
+    background: linear-gradient(135deg, #00bfff, #0077ff);
+    color: #000;
+    margin-left: auto;
+    text-align: right;
+    border-bottom-right-radius: 0;
+    box-shadow: 0 0 15px #00bfff;
+  }
+
+  .ai {
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    color: #00ffff;
+    border-bottom-left-radius: 0;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .mic-area {
+    position: fixed;
+    bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .mic-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    position: relative;
+    background: rgba(0, 255, 255, 0.05);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 20px #00eaff;
+  }
+
+  .mic-button {
+    border: none;
+    background: #00ffff;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    font-size: 2rem;
+    color: #000;
+    cursor: pointer;
+    box-shadow: 0 0 20px #00eaff;
+    transition: all 0.3s;
+  }
+
+  .mic-ring.recording::before {
+    content: "";
+    position: absolute;
+    border: 2px solid #00eaff;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    animation: pulseRing 1.5s infinite;
+  }
+
+  @keyframes pulseRing {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+
+  .status {
+    margin-top: 12px;
+    font-size: 1rem;
+    color: #00ffff;
+    text-shadow: 0 0 5px #00eaff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #00ffff;
+    border-radius: 10px;
+  }
+</style>
+</head>
+
+<body>
+  <h1>AI Voice Assistant</h1>
+
+  <div class="chat-container" id="chatContainer"></div>
+
+  <div class="mic-area">
+    <div class="mic-ring" id="micRing">
+      <button class="mic-button" id="micBtn">🎤</button>
+    </div>
+    <div class="status" id="status">Click mic & speak</div>
+  </div>
+
+  <script>
+    const micBtn = document.getElementById("micBtn");
+    const micRing = document.getElementById("micRing");
+    const chatContainer = document.getElementById("chatContainer");
+    const statusText = document.getElementById("status");
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+
+    micBtn.addEventListener("click", () => {
+      if (micRing.classList.contains("recording")) {
+        recognition.stop();
+        micRing.classList.remove("recording");
+        statusText.textContent = "Click mic & speak";
+      } else {
+        recognition.start();
+        micRing.classList.add("recording");
+        statusText.textContent = "Listening...";
+      }
+    });
+
+    recognition.onresult = async (event) => {
+      const userInput = event.results[0][0].transcript;
+      addMessage(userInput, "user");
+      statusText.textContent = "Processing...";
+
+      const response = await fetch("/process_voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_input: userInput }),
+      });
+
+      const data = await response.json();
+      typeMessage(data.response, "ai");
+      speakResponse(data.response);
+      statusText.textContent = "Click mic & speak";
+      micRing.classList.remove("recording");
+    };
+
+    recognition.onerror = (err) => {
+      statusText.textContent = "Error: " + err.error;
+      micRing.classList.remove("recording");
+    };
+
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      msg.textContent = text;
+      chatContainer.appendChild(msg);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function typeMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      chatContainer.appendChild(msg);
+      let index = 0;
+      const typing = setInterval(() => {
+        msg.textContent = text.slice(0, index++);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (index > text.length) clearInterval(typing);
+      }, 20);
+    }
+
+    function speakResponse(text) {
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.pitch = 1.1;
+      utterance.rate = 1.02;
+      synth.speak(utterance);
+    }
+  </script>
+</body>
+</html>
+
+
+
+
