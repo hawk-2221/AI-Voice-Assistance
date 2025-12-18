@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 
 # 👇 Set your Gemini API key here
-os.environ["GOOGLE_API_KEY"] = "AIzaSyD8n6vVOKhSGDTzkbnFIOQOBiuASPQ-nHQ"
+os.environ["GOOGLE_API_KEY"] = "Paste Your API Key"
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
 model = genai.GenerativeModel("models/gemini-flash-latest")
@@ -52,3 +52,4 @@ def process_voice():
 if __name__ == '__main__':
     # debug=True so Flask reloads automatically
     app.run(debug=True)
+
